@@ -1,6 +1,9 @@
 package actors;
 
+import game.Invaders;
 import game.Stage;
+
+import java.awt.*;
 
 public class Invader extends Actor {
 	
@@ -11,8 +14,10 @@ public class Invader extends Actor {
 	private int rightWall = 0;
 	private int step = 0;
 	private int advanceTime = 1000;
+	public int targetLock = 0;
+	private Player player;
 	
-	public Invader(Stage stage) {
+	public Invader(Stage stage, Player player) {
 		super(stage);
 		
 		if (((int)(Math.random()*10))%2 == 0) 
@@ -27,15 +32,18 @@ public class Invader extends Actor {
 		height = 20;
 		posX = Stage.WIDTH/2;
 		posY = Stage.HEIGHT/2;
-		//parent = "game";
+		this.player = player;
 	}
 	
 	public void invaderFire() {
-		InvaderShot shot = new InvaderShot(stage);
-		shot.setX(posX + width/2);
-		shot.setY(posY + shot.getHeight());
-		shot.setParent("invader");
-		stage.actors.add(shot);
+		//Rectangle playerBounds = player.getBounds(Player.PLAYER_EXTRA_BOUNDS);
+		//if( !playerBounds.intersects(getBounds()) ) {
+			InvaderShot shot = new InvaderShot(stage);
+			shot.setX(posX + width / 2);
+			shot.setY(posY + shot.getHeight());
+			shot.setParent("invader");
+			stage.actors.add(shot);
+		//}
 	}
 
 	public void act() {
@@ -45,7 +53,7 @@ public class Invader extends Actor {
 			if (Math.random() < FIRING_FREQUENCY)
 				invaderFire();
 		}
-		
+
 		updateXSpeed();
 		updateYSpeed();
 	}
@@ -81,7 +89,7 @@ public class Invader extends Actor {
 			return;
 		
 		playSound("explosion.wav");
-		if (a instanceof Shot)
+		if (a instanceof Shot && targetLock > 0)
 			setMarkedForRemoval(true);
 	}
 	

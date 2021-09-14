@@ -27,11 +27,11 @@ import com.cabd.hunting.SaveLoad;
 
 public class Invaders extends Stage implements KeyListener {
 
+	private static final int MAX_THREADS = 40;
+	private static final int DEBUG = 3; // 0 DISABLE, 1 ALL, 2 DEBUG VIEW, 3 RNN VIEW, 4 DISABLE SCREEN
 	private static final long serialVersionUID = 1L;
 	private static final double LEARNING_RATE = 500;
 	private static final double TIME_REFRASH = 1000;
-	private static final boolean DEBUG = false;
-	private static int MAX_SCORE = 0;
 	private int max_generations = 0;
 
 	private Player player;
@@ -49,6 +49,7 @@ public class Invaders extends Stage implements KeyListener {
 	private final int neurons_amount[] = {3, 3, 3};
 	private NeuralNetwork nn;
 	private SaveLoad saveLoad = new SaveLoad();
+	private double playerShotNear = 0.0;
 	private double enemyShotNear = 0.0;
 	private double nerestInvaderPositions;
 
@@ -103,8 +104,8 @@ public class Invaders extends Stage implements KeyListener {
 			.setMinWeigh(1)
 			.setNumberNeurons(neurons_amount)
 			.setGenomesPerGeneration(genomes_per_generation)
-			.setRandomMutationProbability(0.2)
-			.setCrossOverRate(0.2)
+			.setRandomMutationProbability(0.5)
+			.setCrossOverRate(0.5)
 			.setSaveLoad(saveLoad)
 			.getRNN();
 	}
@@ -114,7 +115,7 @@ public class Invaders extends Stage implements KeyListener {
 	 * add a grid of invaders based on the screen size
 	 */
 	public void addInvaders() {
-		Invader invader = new Invader(this);
+		Invader invader = new Invader(this, player);
 		//padding between units/rows
 		int xPad = invader.getWidth() + 15;
 		int yPad = invader.getHeight() + 20;
@@ -125,7 +126,7 @@ public class Invaders extends Stage implements KeyListener {
 		//create and add invaders for each row
 		for (int i = 0; i < rows; i++) {
 			for (int j = 0; j < unitsPerRow -1; j++) {
-				Invader inv = new Invader(this);
+				Invader inv = new Invader(this, player);
 				inv.setX((j + 1)*xPad);
 				inv.setY((i + 1)*yPad);
 				inv.setVx(10);
@@ -166,45 +167,56 @@ public class Invaders extends Stage implements KeyListener {
 		gameOver = false;
 		gameWon = false;
 		player.resetScore();
+		player.seconds=0;
 		player.setX(Stage.WIDTH/2);
 		player.playerActivateShield(false);
 		addInvaders();
 	}
 
-	public void paintWorld() {
-
-		//get the graphics from the buffer
-		Graphics g = strategy.getDrawGraphics();
-		//init image to background
-		g.setColor(getBackground());
-		g.fillRect(0, 0, getWidth(), getHeight());
-		//load subimage from the background
-		g.drawImage( background,0,0,Stage.WIDTH,Stage.HEIGHT,0,backgroundY,Stage.WIDTH,backgroundY+Stage.HEIGHT,this);
-
-		//paint the actors
-		for (int i = 0; i < actors.size(); i++) {
-			Actor actor = actors.get(i);
-			actor.paint(g);
-
-			if (actor instanceof Shot && actor.getParent().equals("invader")) {
-				drawBounds(g, actor.getBounds());
-			}
-		}
-
-		player.paint(g);
-		drawBounds(g, player.getBounds(80));
-
-		paintScore(g);
-		paintFPS(g);
-		//swap buffer
-		strategy.show();
+	public boolean debugRule(int status){
+		return status >= DEBUG;
 	}
 
-	public void drawBounds(Graphics g, Rectangle rec) {
-		if(DEBUG) {
-			g.setColor(Color.LIGHT_GRAY);
-			g.fillRect(rec.x, rec.y, rec.width, rec.height);
+	public void paintWorld() {
+		if (DEBUG < 4) {
+			//get the graphics from the buffer
+			Graphics g = strategy.getDrawGraphics();
+			g.fillRect(0, 0, getWidth(), getHeight());
+			//init image to background
+			g.setColor(getBackground());
+			//load subimage from the background
+			g.drawImage(background, 0, 0, Stage.WIDTH, Stage.HEIGHT, 0, backgroundY, Stage.WIDTH, backgroundY + Stage.HEIGHT, this);
+
+			if(debugRule(player.getDebugMode()) && DEBUG > 0) {
+				if(enemyShotNear <= 0.0 && player.getShield())
+					drawBounds(g, player.getBounds(Player.PLAYER_EXTRA_BOUNDS), Color.RED);
+				else
+					drawBounds(g, player.getBounds(Player.PLAYER_EXTRA_BOUNDS), Color.cyan);
+			}
+			//paint the actors
+			for (int i = 0; i < actors.size(); i++) {
+				Actor actor = actors.get(i);
+
+				if(debugRule(actor.getDebugMode()))
+					actor.paint(g);
+
+				if (actor instanceof Shot && actor.getParent().equals("invader")) {
+					if(debugRule(actor.getDebugMode()) && DEBUG > 0)
+						drawBounds(g, actor.getBounds(), Color.ORANGE);
+				}
+			}
+
+			player.paint(g);
+			paintScore(g);
+			paintFPS(g);
+			//swap buffer
+			strategy.show();
 		}
+	}
+
+	public void drawBounds(Graphics g, Rectangle rec, Color color) {
+		g.setColor(color);
+		g.fillRect(rec.x, rec.y, rec.width, rec.height);
 	}
 
 	public void paintFPS(Graphics g) {
@@ -229,18 +241,26 @@ public class Invaders extends Stage implements KeyListener {
 
 	    int i = 0;
 		int numInvaders = 0;
+		double playerShotNearTmp= 0.0;
+		Actor enemyShotNearTmp = new Actor(this);;
+		Actor nerestInvaderTmp = new Actor(this);
 		while (i < actors.size()) {
 			Actor actor = actors.get(i);
 			if (actor instanceof Shot) {
+				if(actor.getParent().equals("invader")) {
+					if(checkSensorOfCollisionWithExtra(player, (Shot) actor)) {
+						enemyShotNearTmp = actor;
+						actor.setDebug(3);
+					}
+				}
+				if(actor.getParent().equals("playerShot")) {
+					playerShotNearTmp = actor.getY();
+				}
 				checkCollision(actor);
-				if(actor.getParent().equals("invader"))
-					getNearestInvaderShot((Shot) actor);
 			}
 			if(actor instanceof Shield){
 				if(player.getShield()) {
 					((PlayerShield) actor).act(player);
-				}else{
-					//player.playerDisableShield(actor);
 				}
 			}
 
@@ -253,12 +273,16 @@ public class Invaders extends Stage implements KeyListener {
 				//0 means player won the match
 				if(actor instanceof Invader) {
 					numInvaders++;
-					getNearestInvader((Invader) actor);
+					nerestInvaderTmp = actor;
 				}
 				actor.act();
 				i++;
 			}
 		}
+		enemyShotNear = enemyShotNearTmp.getY();
+		playerShotNear = playerShotNearTmp;
+		setNearestInvaderPosition((Invader) nerestInvaderTmp);
+
 		if (numInvaders == 0)
 			super.gameWon = true;
 
@@ -266,13 +290,9 @@ public class Invaders extends Stage implements KeyListener {
 		player.act();
 	}
 
-	private void getNearestInvaderShot(Shot shot) {
-		if(checkCollisionExtra(player, shot, 80))
-			enemyShotNear = 1.0;
-
-	}
-
-	private void getNearestInvader(Invader invader) {
+	private void setNearestInvaderPosition(Invader invader) {
+		invader.setDebug(3);
+		invader.targetLock = 1;
 		nerestInvaderPositions = (getWidth()-invader.getX())-(getWidth()-player.getX());
 	}
 
@@ -289,8 +309,8 @@ public class Invaders extends Stage implements KeyListener {
 		}
 	}
 
-	private boolean checkCollisionExtra(Player player, Shot shot, int extraSize) {
-		Rectangle playerBounds = player.getBounds(extraSize);
+	private boolean checkSensorOfCollisionWithExtra(Player player, Shot shot) {
+		Rectangle playerBounds = player.getBounds(Player.PLAYER_EXTRA_BOUNDS);
 		if (playerBounds.intersects(shot.getBounds())) {
 			return true;
 		}
@@ -309,22 +329,13 @@ public class Invaders extends Stage implements KeyListener {
 			if (backgroundY < 0)
 				backgroundY = backgroundTile.getHeight();
 
-			if (super.gameOver || player.getX() > 600 || player.getX() < -200 || player.getScore() < 0) {
+			if (super.gameOver || player.getX() > 800 || player.getX() < -200 || player.getScore() < 0) {
 				startNewGenome();
 				resetWorld();
 			}
 			else if (super.gameWon) {
 				startNewGenome();
 				resetWorld();
-			}
-
-			int random = (int)(Math.random()*1000);
-			if (random == 700) {
-				Actor ufo = new Ufo(this);
-				ufo.setX(0);
-				ufo.setY(20);
-				ufo.setVx(1);
-				actors.add(ufo);
 			}
 
 			updateWorld();
@@ -347,16 +358,18 @@ public class Invaders extends Stage implements KeyListener {
 		if((System.currentTimeMillis() - learnRate) > LEARNING_RATE) {
 			learnRate = System.currentTimeMillis();
 
-			double[] inputs = { nerestInvaderPositions, player.getFire(), enemyShotNear};
+			double[] inputs = { nerestInvaderPositions*2, playerShotNear, enemyShotNear};
 			double[] outputs = nn.learn(inputs);
 
 			setRnnActions(outputs);
 
-			if(player.getShield() && enemyShotNear == 0)
+			if(player.getShield() && enemyShotNear <= 0.0)
 				player.decreaseScore(5);
 
 			nerestInvaderPositions= 0.0;
 			enemyShotNear = 0.0;
+
+			player.seconds++;
 
 			System.out.println(String.format("inputs %s %s, %s", inputs[0], inputs[1], inputs[2]));
 			System.out.println(String.format("outputs %s %s, %s", outputs[0], outputs[1], outputs[2]));
@@ -365,14 +378,10 @@ public class Invaders extends Stage implements KeyListener {
 	}
 
 	private void startNewGenome() {
-//		new Thread(new Runnable() {
-//			public void run() {
 		max_generations++;
 		System.out.println("New generation:" + max_generations);
 		nn.newGenome( player.getScore() );
 		resetWorld();
-//			}
-//		}).start();
 	}
 
 	private void setRnnActions(double[] outputs) {
@@ -417,7 +426,17 @@ public class Invaders extends Stage implements KeyListener {
 	}
 
 	public static void main(String[] args) {
-		Invaders inv = new Invaders();
-		inv.game();
+		List<Thread> treads = new ArrayList<>();
+		for(int i=0; i<MAX_THREADS; i++) {
+			treads.add(new Thread(new Runnable() {
+				public void run() {
+					Invaders inv = new Invaders();
+					inv.game();
+				}
+			}));
+		}
+		for(Thread thread : treads){
+			thread.start();
+		}
 	}
 }

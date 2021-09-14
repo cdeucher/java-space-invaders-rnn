@@ -22,7 +22,7 @@ public class PlayerShield extends Shield {
         if (a instanceof Shield)
             return;
         if( a.getParent().equals("invader") ) {
-            player.updateScore(10);
+            //player.updateScore(10);
             a.setMarkedForRemoval(true);
         }
     }

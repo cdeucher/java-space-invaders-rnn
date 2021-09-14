@@ -7,14 +7,16 @@ import java.awt.event.KeyEvent;
 import java.util.Objects;
 
 public class Player extends Actor {
-	
+
+	public static final int PLAYER_EXTRA_BOUNDS = 150;
+
 	private boolean up,down,left,right;
 	private int score = 0;
 	private boolean fire = false;
 	private boolean shield = false;
-	private Vision vision;
 	private PlayerShield playerShield;
 	private int applyBounds;
+	public double seconds = 0.0;
 
 	public Player(Stage stage) {
 		super(stage);
@@ -26,6 +28,7 @@ public class Player extends Actor {
 		height = 20;
 		posX = Stage.WIDTH/2;
 		posY = Stage.HEIGHT/2;
+		super.setDebug(2);
 	}
 
 	public void act() {
@@ -109,11 +112,12 @@ public class Player extends Actor {
 	}
 
 	public void fire() {
-		if(fire) {
+		if(fire) { // && seconds > 10
 			Actor shot = new PlayerShot(stage);
 			shot.setX(posX);
 			shot.setY(posY - shot.getHeight());
-			shot.setParent("player");
+			shot.setParent("playerShot");
+			shot.setDebug(3);
 			stage.actors.add(shot);
 			playSound("photon.wav");
 		}
@@ -149,6 +153,7 @@ public class Player extends Actor {
 			newShield.setX(getX());
 			newShield.setY(getY());
 			newShield.setParent("player");
+			newShield.setDebug(3);
 			playerShield = newShield;
 			stage.actors.add(newShield);
 		}else
@@ -160,7 +165,7 @@ public class Player extends Actor {
 
 	public Rectangle getBounds(int applyExtraSize) {
 		applyBounds = applyExtraSize;
-		return new Rectangle(posX,posY-applyExtraSize,width+applyExtraSize, height+applyExtraSize);
+		return new Rectangle(posX-(applyExtraSize/2),posY-(applyExtraSize/2),width+applyExtraSize, height+(applyExtraSize));
 	}
 
 	public void playerDisableShield() {

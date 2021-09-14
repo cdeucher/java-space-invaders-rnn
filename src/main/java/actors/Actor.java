@@ -23,6 +23,7 @@ public class Actor {
 	protected String[] sprites = null; 
 	protected Stage stage = null;
 	protected String parent = "";
+	private int debug = 1;
 
 	public Actor(Stage canvas) {
 		this.stage = canvas;
@@ -130,5 +131,13 @@ public class Actor {
 	
 	public int getPointValue() {
 		return Actor.POINT_VALUE;
+	}
+
+    public int getDebugMode() {
+		return debug;
+    }
+
+	public void setDebug(int debug) {
+		this.debug = debug;
 	}
 }
