@@ -89,7 +89,7 @@ public class Invader extends Actor {
 			return;
 		
 		playSound("explosion.wav");
-		if (a instanceof Shot && targetLock > 0)
+		if (a instanceof Shot)// && targetLock > 0)
 			setMarkedForRemoval(true);
 	}
 	

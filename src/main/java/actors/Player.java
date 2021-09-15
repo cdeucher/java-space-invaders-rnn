@@ -8,7 +8,7 @@ import java.util.Objects;
 
 public class Player extends Actor {
 
-	public static final int PLAYER_EXTRA_BOUNDS = 150;
+	public static final int PLAYER_EXTRA_BOUNDS = 250;
 
 	private boolean up,down,left,right;
 	private int score = 0;
@@ -16,7 +16,6 @@ public class Player extends Actor {
 	private boolean shield = false;
 	private PlayerShield playerShield;
 	private int applyBounds;
-	public double seconds = 0.0;
 
 	public Player(Stage stage) {
 		super(stage);
@@ -112,7 +111,7 @@ public class Player extends Actor {
 	}
 
 	public void fire() {
-		if(fire) { // && seconds > 10
+		if(fire) {
 			Actor shot = new PlayerShot(stage);
 			shot.setX(posX);
 			shot.setY(posY - shot.getHeight());
@@ -140,10 +139,6 @@ public class Player extends Actor {
 
 	public void setFire(boolean b) {
 		fire = b;
-	}
-
-	public double getFire() {
-		return fire ? 1 : 0;
 	}
 
 	public void playerActivateShield(boolean activate) {

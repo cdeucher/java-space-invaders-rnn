@@ -15,6 +15,8 @@ import java.awt.event.WindowEvent;
 import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 
 import javax.swing.JFrame;
@@ -27,8 +29,8 @@ import com.cabd.hunting.SaveLoad;
 
 public class Invaders extends Stage implements KeyListener {
 
-	private static final int MAX_THREADS = 40;
-	private static final int DEBUG = 3; // 0 DISABLE, 1 ALL, 2 DEBUG VIEW, 3 RNN VIEW, 4 DISABLE SCREEN
+	private static final int MAX_THREADS = 15;
+	private static final int DEBUG = 1; // 0 DISABLE, 1 ALL, 2 DEBUG VIEW, 3 RNN VIEW, 4 DISABLE SCREEN
 	private static final long serialVersionUID = 1L;
 	private static final double LEARNING_RATE = 500;
 	private static final double TIME_REFRASH = 1000;
@@ -46,13 +48,12 @@ public class Invaders extends Stage implements KeyListener {
 
 	// Setup neural network
 	private final int genomes_per_generation = 3;
-	private final int neurons_amount[] = {3, 3, 3};
+	private final int neurons_amount[] = {2, 2, 2};
 	private NeuralNetwork nn;
 	private SaveLoad saveLoad = new SaveLoad();
 	private double playerShotNear = 0.0;
 	private double enemyShotNear = 0.0;
 	private double nerestInvaderPositions;
-
 
 	public Invaders() {
 		createRNN();
@@ -96,6 +97,7 @@ public class Invaders extends Stage implements KeyListener {
 		keyReleasedHandler = new InputHandler(this, player);
 		keyReleasedHandler.action = InputHandler.Action.RELSEASE;
 
+		game();
 	}
 
 	private void createRNN() {
@@ -167,7 +169,6 @@ public class Invaders extends Stage implements KeyListener {
 		gameOver = false;
 		gameWon = false;
 		player.resetScore();
-		player.seconds=0;
 		player.setX(Stage.WIDTH/2);
 		player.playerActivateShield(false);
 		addInvaders();
@@ -267,8 +268,7 @@ public class Invaders extends Stage implements KeyListener {
 			if (actor.isMarkedForRemoval()) {
 				player.updateScore(actor.getPointValue());
 				actors.remove(i);
-			}
-			else {
+			} else {
 				//check how many invaders are remaining
 				//0 means player won the match
 				if(actor instanceof Invader) {
@@ -281,7 +281,8 @@ public class Invaders extends Stage implements KeyListener {
 		}
 		enemyShotNear = enemyShotNearTmp.getY();
 		playerShotNear = playerShotNearTmp;
-		setNearestInvaderPosition((Invader) nerestInvaderTmp);
+		if(Objects.nonNull(nerestInvaderTmp.sprites))
+			setNearestInvaderPosition((Invader) nerestInvaderTmp);
 
 		if (numInvaders == 0)
 			super.gameWon = true;
@@ -358,21 +359,20 @@ public class Invaders extends Stage implements KeyListener {
 		if((System.currentTimeMillis() - learnRate) > LEARNING_RATE) {
 			learnRate = System.currentTimeMillis();
 
-			double[] inputs = { nerestInvaderPositions*2, playerShotNear, enemyShotNear};
+			//double[] inputs = { nerestInvaderPositions, playerShotNear, enemyShotNear};
+			double[] inputs = { nerestInvaderPositions, playerShotNear};
 			double[] outputs = nn.learn(inputs);
 
 			setRnnActions(outputs);
 
-			if(player.getShield() && enemyShotNear <= 0.0)
-				player.decreaseScore(5);
+//			if(player.getShield() && enemyShotNear <= 0.0)
+//				player.decreaseScore(5);
 
 			nerestInvaderPositions= 0.0;
 			enemyShotNear = 0.0;
 
-			player.seconds++;
-
-			System.out.println(String.format("inputs %s %s, %s", inputs[0], inputs[1], inputs[2]));
-			System.out.println(String.format("outputs %s %s, %s", outputs[0], outputs[1], outputs[2]));
+			System.out.println(String.format("inputs %s %s", inputs[0], inputs[1]));//, inputs[2]));
+			System.out.println(String.format("outputs %s %s", outputs[0], outputs[1]));//, outputs[2]));
 		}
 		return learnRate;
 	}
@@ -395,13 +395,13 @@ public class Invaders extends Stage implements KeyListener {
 		else
 			player.setFire(false);
 
-		if(outputs[2] > 0.5) {
+//		if(outputs[2] > 0.5) {
 			System.out.println("Enable shield");
 			player.playerActivateShield(true);
-		}else {
-			System.out.println("Disable shield");
-			player.playerActivateShield(false);
-		}
+//		}else {
+//			System.out.println("Disable shield");
+//			player.playerActivateShield(false);
+//		}
 		player.fire();
 	}
 
@@ -426,17 +426,27 @@ public class Invaders extends Stage implements KeyListener {
 	}
 
 	public static void main(String[] args) {
+//		ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newCachedThreadPool();
+//		for(int i=0; i<MAX_THREADS; i++) {
+//			executor.submit(() -> {
+//				new Invaders().game();
+//			});
+//		}
+//		new Invaders().game();
+
 		List<Thread> treads = new ArrayList<>();
 		for(int i=0; i<MAX_THREADS; i++) {
 			treads.add(new Thread(new Runnable() {
-				public void run() {
-					Invaders inv = new Invaders();
-					inv.game();
-				}
+				 public void run() {
+						Invaders inv = new Invaders();
+						inv.game();
+				 }
 			}));
 		}
 		for(Thread thread : treads){
 			thread.start();
 		}
+		Invaders inv = new Invaders();
+		inv.game();
 	}
 }

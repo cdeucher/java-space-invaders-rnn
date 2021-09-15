@@ -20,7 +20,7 @@ public class Actor {
 	protected int actorSpeed;
 	protected int time;
 	private boolean markedForRemoval = false;
-	protected String[] sprites = null; 
+	public String[] sprites = null;
 	protected Stage stage = null;
 	protected String parent = "";
 	private int debug = 1;
