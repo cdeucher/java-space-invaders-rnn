@@ -29,11 +29,12 @@ import com.cabd.hunting.SaveLoad;
 
 public class Invaders extends Stage implements KeyListener {
 
-	private static final int MAX_THREADS = 15;
-	private static final int DEBUG = 1; // 0 DISABLE, 1 ALL, 2 DEBUG VIEW, 3 RNN VIEW, 4 DISABLE SCREEN
+	private static final int MAX_THREADS = 1;
+	private static final int DEBUG = 0; // 0 DISABLE, 1 ALL, 2 DEBUG VIEW, 3 RNN VIEW, 4 DISABLE SCREEN
 	private static final long serialVersionUID = 1L;
 	private static final double LEARNING_RATE = 500;
 	private static final double TIME_REFRASH = 1000;
+	private static final boolean ONLY_RUN = true;
 	private int max_generations = 0;
 
 	private Player player;
@@ -48,7 +49,7 @@ public class Invaders extends Stage implements KeyListener {
 
 	// Setup neural network
 	private final int genomes_per_generation = 3;
-	private final int neurons_amount[] = {2, 2, 2};
+	private final int neurons_amount[] = {3, 3, 3};
 	private NeuralNetwork nn;
 	private SaveLoad saveLoad = new SaveLoad();
 	private double playerShotNear = 0.0;
@@ -110,6 +111,7 @@ public class Invaders extends Stage implements KeyListener {
 			.setCrossOverRate(0.5)
 			.setSaveLoad(saveLoad)
 			.getRNN();
+		nn.setOnlyExec(ONLY_RUN);
 	}
 
 
@@ -360,7 +362,7 @@ public class Invaders extends Stage implements KeyListener {
 			learnRate = System.currentTimeMillis();
 
 			//double[] inputs = { nerestInvaderPositions, playerShotNear, enemyShotNear};
-			double[] inputs = { nerestInvaderPositions, playerShotNear};
+			double[] inputs = { nerestInvaderPositions, nerestInvaderPositions, enemyShotNear};
 			double[] outputs = nn.learn(inputs);
 
 			setRnnActions(outputs);
@@ -371,8 +373,8 @@ public class Invaders extends Stage implements KeyListener {
 			nerestInvaderPositions= 0.0;
 			enemyShotNear = 0.0;
 
-			System.out.println(String.format("inputs %s %s", inputs[0], inputs[1]));//, inputs[2]));
-			System.out.println(String.format("outputs %s %s", outputs[0], outputs[1]));//, outputs[2]));
+			System.out.println(String.format("inputs %s %s %s", inputs[0], inputs[1], inputs[2]));
+			System.out.println(String.format("outputs %s %s %s", outputs[0], outputs[1], outputs[2]));
 		}
 		return learnRate;
 	}
@@ -395,13 +397,13 @@ public class Invaders extends Stage implements KeyListener {
 		else
 			player.setFire(false);
 
-//		if(outputs[2] > 0.5) {
+		if(outputs[2] > 0.5) {
 			System.out.println("Enable shield");
 			player.playerActivateShield(true);
-//		}else {
-//			System.out.println("Disable shield");
-//			player.playerActivateShield(false);
-//		}
+		}else {
+			System.out.println("Disable shield");
+			player.playerActivateShield(false);
+		}
 		player.fire();
 	}
 
@@ -446,7 +448,5 @@ public class Invaders extends Stage implements KeyListener {
 		for(Thread thread : treads){
 			thread.start();
 		}
-		Invaders inv = new Invaders();
-		inv.game();
 	}
 }
