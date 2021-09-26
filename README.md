@@ -9,6 +9,7 @@
 ## Dependency
 + https://github.com/cdeucher/java-hunting-neural-network.git
 
+## How to run
 ```bash
 git clone https://github.com/cdeucher/java-hunting-neural-network.git
 cd java-hunting-neural-network
