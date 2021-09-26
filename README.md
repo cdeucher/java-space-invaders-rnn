@@ -1,6 +1,6 @@
 # Playing Space Invaders with Neural Network and Genetic Algorithm.
 
-## Original Repository
+## Original Repositories
 + https://github.com/yogthos/Space-Invaders.git
 + https://github.com/fabiorino/NeuralNetwork-plays-Pong/tree/master/NeuralNetwork
 
